@@ -1,0 +1,3 @@
+function runAttendance() {
+  AttendanceService.processAttendance();
+}
