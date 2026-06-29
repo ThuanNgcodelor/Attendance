@@ -31,12 +31,30 @@ const ExcelImporter = {
    */
   findLatestExcel() {
 
+    const files = this.findAllExcelFiles();
+
+    if (files.length === 0) return null;
+
+    // Trả về file có LastUpdated muộn nhất
+    return files.reduce((latest, file) => {
+      return file.getLastUpdated() > latest.getLastUpdated() ? file : latest;
+    });
+
+  },
+
+  /**
+   * Tìm TẤT CẢ file trong Import Folder (hỗ trợ batch processing)
+   * Dùng khi muốn xử lý nhiều file cùng lúc
+   *
+   * @returns {File[]} Mảng các file tìm được
+   */
+  findAllExcelFiles() {
+
     const folder = Config.getImportFolder();
 
     Logger.log("Import Folder : " + folder.getName());
 
-    let latestFile = null;
-    let latestDate = null;
+    const allFiles = [];
 
     for (const mimeType of this.SUPPORTED_MIME_TYPES) {
 
@@ -44,27 +62,19 @@ const ExcelImporter = {
 
       while (files.hasNext()) {
 
-        const file    = files.next();
-        const updated = file.getLastUpdated();
+        const file = files.next();
 
         Logger.log("Found : " + file.getName() + " | " + mimeType);
 
-        if (!latestDate || updated > latestDate) {
-          latestDate = updated;
-          latestFile = file;
-        }
+        allFiles.push(file);
 
       }
 
     }
 
-    if (!latestFile) {
-      Logger.log("Không tìm thấy file trong Import Folder.");
-    } else {
-      Logger.log("Latest File : " + latestFile.getName());
-    }
+    Logger.log("Total files in Import Folder : " + allFiles.length);
 
-    return latestFile;
+    return allFiles;
 
   },
 
