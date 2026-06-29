@@ -98,19 +98,54 @@ const AttendanceService = {
 
       }
 
-      // 4. Archive từng file đã xử lý
+      // 4. Tạo file Bảng Công (Archive Công Folder)
+      // ── Bọn trong try/catch riêng: lỗi Công không dừng bước archive chấm công ──
+      if (allResults.length > 0) {
+
+        try {
+
+          Logger.log("---------------------------------");
+          Logger.log("Building Bảng Công...");
+
+          const congData = CongCalculator.build(allResults);
+
+          if (congData) {
+
+            // Đặt tên file theo khoảng ngày
+            const congName = congData.dateRange; // VD: "01-May-26 - 31-May-26"
+
+            CongWriter.write(congData, congName);
+
+            Logger.log("Bảng Công created : CONG_" + congName);
+
+          } else {
+
+            Logger.log("CongCalculator: Không có dữ liệu để tạo Bảng Công.");
+
+          }
+
+        } catch (congError) {
+
+          // Không dừng toàn bộ — chỉ log cảnh báo
+          Logger.log("CongWriter Warning: " + congError.toString());
+
+        }
+
+      }
+
+      // 5. Archive từng file đã xử lý (Archive Chấm Công + xóa gốc)
       for (const batch of processedBatches) {
 
         Logger.log("Archiving : " + batch.file.getName());
 
-        // 4a. Ghi dữ liệu sạch (8 cột) vào TMP_ rồi move vào Archive
+        // 5a. Ghi dữ liệu sạch (8 cột) vào TMP_ rồi move vào Archive Chấm Công
         ExcelImporter.formatAndArchive(
           batch.spreadsheetId,
           batch.results,
           batch.file.getName()
         );
 
-        // 4b. Xóa file gốc khỏi Import Folder
+        // 5b. Xóa file gốc khỏi Import Folder
         ExcelImporter.deleteFromImport(batch.file);
 
       }

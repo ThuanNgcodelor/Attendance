@@ -19,6 +19,16 @@ const AttendanceCalculator = {
    */
   calculate(record) {
 
+    // ── SPECIAL SCHEDULE CHECK ─────────────────────────────────────────────
+    // Nếu nhân viên có ca đặc biệt → dùng logic riêng, không lọc theo khung giờ
+    const specialIds = Config.getSpecialEmployeeIds();
+    const isSpecial   = specialIds.some(id => id === record.employeeId.toString().trim());
+
+    if (isSpecial) {
+      return this.calculateSpecialSchedule(record);
+    }
+    // ──────────────────────────────────────────────────────────────────
+
     // Đọc giờ cấu hình từ Settings và chuẩn hóa về dạng "HH:mm"
     const checkInStart  = this.formatTime(Config.getCheckInStart())  || "04:00";
     const checkInEnd    = this.formatTime(Config.getCheckInEnd())    || "09:00";
@@ -56,21 +66,60 @@ const AttendanceCalculator = {
 
     return {
 
-      employeeId:   record.employeeId,
+      employeeId:        record.employeeId,
+      employeeName:      record.employeeName,
+      department:        record.department,
+      date:              record.date,
+      dayOfWeek:         record.dayOfWeek,
+      firstPunch:        firstPunch,
+      secondPunch:       secondPunch,
+      status:            this.buildStatus(firstPunch, secondPunch, isDefaultUsed),
+      isSpecialSchedule: false
 
-      employeeName: record.employeeName,
+    };
 
-      department:   record.department,
+  },
 
-      date:         record.date,
+  /**
+   * Tính chấm công cho nhân viên CA ĐẶC BIỆT
+   *
+   * Khác với calculate() chuẩn:
+   *  - Không lọc theo khung giờ CHECKIN/CHECKOUT
+   *  - Lấy punch sớm nhất làm firstPunch, muộn nhất làm secondPunch
+   *  - Không áp dụng DEFAULT_CHECKIN / DEFAULT_CHECKOUT
+   *
+   * @param {Object} record
+   * @returns {Object} AttendanceResult
+   */
+  calculateSpecialSchedule(record) {
 
-      dayOfWeek:    record.dayOfWeek,
+    const times = (record.punches || [])
+      .map(p => this.formatTime(p))
+      .filter(t => t !== null)
+      .sort(); // Sắp xếp chuỗi "HH:mm" tăng dần
 
-      firstPunch:   firstPunch,
+    const firstPunch  = times.length > 0 ? times[0] : null;
+    const secondPunch = times.length > 1 ? times[times.length - 1] : null;
 
-      secondPunch:  secondPunch,
+    Logger.log(
+      "Special Schedule: " + record.employeeId +
+      " | " + record.date +
+      " | punches=" + times.join(", ") +
+      " | first=" + firstPunch +
+      " | last=" + secondPunch
+    );
 
-      status:       this.buildStatus(firstPunch, secondPunch, isDefaultUsed)
+    return {
+
+      employeeId:        record.employeeId,
+      employeeName:      record.employeeName,
+      department:        record.department,
+      date:              record.date,
+      dayOfWeek:         record.dayOfWeek,
+      firstPunch:        firstPunch,
+      secondPunch:       secondPunch,
+      status:            this.buildStatus(firstPunch, secondPunch, false),
+      isSpecialSchedule: true  // Flag dùng cho CongCalculator
 
     };
 

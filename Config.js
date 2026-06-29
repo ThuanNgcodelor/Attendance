@@ -110,6 +110,35 @@ const Config = {
    */
   getDefaultCheckOut() {
     return this.get("DEFAULT_CHECKOUT") || null;
+  },
+
+  // ─── NHÂN VIÊN CA ĐẶC BIỆT ─────────────────────────────────
+
+  /**
+   * Danh sách mã nhân viên có ca đặc biệt (không dùng khung giờ chuẩn)
+   * Cấu hình trong Settings: SPECIAL_EMPLOYEE_IDS = "105,A999,..." (phân cách dấu phẩy)
+   * Nếu để trống → không có nhân viên ca đặc biệt nào
+   *
+   * @returns {string[]} Mảng các mã NV (trim sẵn)
+   */
+  getSpecialEmployeeIds() {
+    const value = this.get("SPECIAL_EMPLOYEE_IDS");
+    if (!value) return [];
+    return value.toString().split(",").map(id => id.trim()).filter(id => id.length > 0);
+  },
+
+  // ─── ARCHIVE CÔNG ─────────────────────────────────────────────────
+
+  /**
+   * Folder lưu trữ file Bảng Công (sau khi xử lý)
+   * Cấu hình trong Settings: ARCHIVE_CONG_FOLDER_ID = "<Folder ID>"
+   *
+   * @returns {Folder}
+   */
+  getArchiveCongFolder() {
+    const folderId = this.get("ARCHIVE_CONG_FOLDER_ID");
+    if (!folderId) throw new Error("Config: ARCHIVE_CONG_FOLDER_ID chưa được cấu hình trong Settings.");
+    return DriveApp.getFolderById(folderId);
   }
 
 };
