@@ -1,7 +1,6 @@
 <script>
   // ─── State ───────────────────────────────────────────────────────────────
   let attendanceFiles = [];
-  let latenessFiles = [];
 
   // ─── Utility: Promisify google.script.run ───────────────────────────────
   function runGoogleScript(funcName, ...args) {
@@ -56,22 +55,7 @@
       if (e.target.files.length > 0) addAttendanceFiles(e.target.files);
     }, false);
 
-    // Lateness Zone (Multi-file)
-    const zoneLat = document.getElementById('uploadZone-lat');
-    const inputLat = document.getElementById('fileInput-lat');
-
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
-      zoneLat.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }, false);
-    });
-    ['dragenter', 'dragover'].forEach(ev => zoneLat.addEventListener(ev, () => zoneLat.classList.add('dragover'), false));
-    ['dragleave', 'drop'].forEach(ev => zoneLat.addEventListener(ev, () => zoneLat.classList.remove('dragover'), false));
-
-    zoneLat.addEventListener('drop', e => {
-      if (e.dataTransfer.files.length > 0) addLatenessFiles(e.dataTransfer.files);
-    }, false);
-    inputLat.addEventListener('change', e => {
-      if (e.target.files.length > 0) addLatenessFiles(e.target.files);
-    }, false);
+    // Lateness Zone đã được gỡ bỏ (chỉ dùng nút bấm trực tiếp)
   });
 
   // --- Attendance ---
@@ -137,69 +121,7 @@
     hideResult('att');
   }
 
-  // --- Lateness (Multi-file) ---
-  function addLatenessFiles(files) {
-    const allowed = /(\.xlsx|\.xlsm|\.xls)$/i;
-    let added = false;
-    for (let i = 0; i < files.length; i++) {
-      if (allowed.test(files[i].name)) {
-        // Tránh trùng tên
-        if (!latenessFiles.find(f => f.name === files[i].name)) {
-          latenessFiles.push(files[i]);
-          added = true;
-        }
-      }
-    }
-    if (added) renderLatenessFiles();
-  }
-
-  function removeLatenessFile(index) {
-    latenessFiles.splice(index, 1);
-    renderLatenessFiles();
-  }
-
-  function clearLatenessFiles() {
-    latenessFiles = [];
-    renderLatenessFiles();
-  }
-
-  function renderLatenessFiles() {
-    const listEl = document.getElementById('fileList-lat');
-    const btn = document.getElementById('btn-lat');
-
-    if (latenessFiles.length === 0) {
-      listEl.classList.add('d-none');
-      btn.disabled = true;
-      document.getElementById('fileInput-lat').value = '';
-      return;
-    }
-
-    listEl.classList.remove('d-none');
-    btn.disabled = false;
-
-    let html = `
-      <div class="file-list-header">
-        <span>Đã chọn ${latenessFiles.length} file</span>
-        <span class="file-list-clear" onclick="clearLatenessFiles()">Xóa tất cả</span>
-      </div>
-    `;
-
-    latenessFiles.forEach((file, idx) => {
-      html += `
-        <div class="file-list-item">
-          <div class="file-list-name">
-            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5z"/></svg>
-            ${file.name}
-            <span class="file-list-size">(${formatBytes(file.size)})</span>
-          </div>
-          <div class="file-list-remove" onclick="removeLatenessFile(${idx})">×</div>
-        </div>
-      `;
-    });
-
-    listEl.innerHTML = html;
-    hideResult('lat');
-  }
+  // --- Lateness (Multi-file) logic đã được gỡ bỏ ---
 
   // ─── Run Attendance ───────────────────────────────────────────────────────
   async function runAttendanceUI() {
@@ -244,32 +166,14 @@
 
   // ─── Run Lateness ─────────────────────────────────────────────────────────
   async function runLatenessUI() {
-    if (latenessFiles.length === 0) return;
-
     setRunning('lat', true);
 
     try {
-      // 1. Xóa file cũ trong Lateness Folder để không bị tính trùng
-      updateProgress('lat', 10, 'Đang làm sạch thư mục Lateness cũ...');
-      await runGoogleScript('clearLatenessFolder');
-
-      // 2. Upload tuần tự từng file
-      for (let i = 0; i < latenessFiles.length; i++) {
-        const file = latenessFiles[i];
-        const pct = 10 + Math.round((i / latenessFiles.length) * 40); // Tới max 50%
-        updateProgress('lat', pct, `Đang upload (${i + 1}/${latenessFiles.length}): ${file.name}...`);
-
-        const base64 = await readFileAsBase64(file);
-        await runGoogleScript('uploadFileToLatenessFolder', file.name, base64);
-      }
-
-      // 3. Chạy pipeline tổng hợp
-      updateProgress('lat', 60, 'Đang tính toán Tổng Hợp Đi Trễ / Về Sớm...');
+      updateProgress('lat', 50, 'Đang quét thư mục và Tính toán Tổng Hợp Đi Trễ / Về Sớm...');
       const res = await runGoogleScript('runLatenessWeb');
 
-      // 4. Xong
+      // Xong
       updateProgress('lat', 100, 'Hoàn thành!');
-      clearLatenessFiles();
       setRunning('lat', false);
 
       let links = '';
