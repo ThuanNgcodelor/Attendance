@@ -105,3 +105,49 @@ function getMimeTypeFromFileName(fileName) {
     default:     return 'application/octet-stream';
   }
 }
+
+/**
+ * API cho Tab "Đi Trễ / Về Sớm" — gọi từ Script.html (runLatenessUI)
+ * Chạy toàn bộ pipeline Lateness và trả về các link kết quả.
+ *
+ * @returns {Object} { latenessSheetUrl, archiveFileUrl, archiveFolderUrl, totalRows }
+ */
+function runLatenessWeb() {
+  try {
+    Logger.log("API runLatenessWeb: Started.");
+
+    // Chạy pipeline Lateness
+    LatenessService.processLateness();
+
+    // Lấy URL Sheet "Lateness" trong HRM Database
+    const spreadsheet    = SpreadsheetApp.getActiveSpreadsheet();
+    const latenessSheet  = spreadsheet.getSheetByName(SHEETS.LATENESS);
+    const latenessSheetUrl = latenessSheet
+      ? spreadsheet.getUrl() + "#gid=" + latenessSheet.getSheetId()
+      : spreadsheet.getUrl();
+
+    const totalRows = latenessSheet
+      ? Math.max(0, latenessSheet.getLastRow() - 1) // trừ header
+      : 0;
+
+    // Lấy URL folder và file mới nhất trong Archiver Tổng hợp
+    const archiveFolder    = Config.getLatenessArchiveFolder();
+    const archiveFileUrl   = getLatestFileInFolder(archiveFolder);
+    const archiveFolderUrl = archiveFolder.getUrl();
+
+    Logger.log("API runLatenessWeb: Done. Rows=" + totalRows);
+
+    return {
+      success:          true,
+      latenessSheetUrl: latenessSheetUrl,
+      archiveFileUrl:   archiveFileUrl,
+      archiveFolderUrl: archiveFolderUrl,
+      totalRows:        totalRows
+    };
+
+  } catch (error) {
+    Logger.log("API runLatenessWeb ERROR: " + error.toString());
+    throw new Error(error.message || error.toString());
+  }
+}
+
