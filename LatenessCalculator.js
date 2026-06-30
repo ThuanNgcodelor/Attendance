@@ -37,8 +37,21 @@ const LatenessCalculator = {
 
     Logger.log("LatenessCalculator: standardIn=" + standardIn + " | standardOut=" + standardOut);
 
+    // Lọc bỏ nhân viên ca đặc biệt (SPECIAL_EMPLOYEE_IDS trong Settings Sheet)
+    // VD: mã 105 (lao công) — không liên quan đến đi trễ/về sớm theo giờ hành chính
+    const specialIds = Config.getSpecialEmployeeIds().map(id => id.toString().trim());
+    const filtered   = specialIds.length > 0
+      ? records.filter(r => !specialIds.includes(r.employeeId.toString().trim()))
+      : records;
+
+    if (specialIds.length > 0) {
+      Logger.log("LatenessCalculator: Bỏ qua " + (records.length - filtered.length) +
+                 " record của nhân viên ca đặc biệt (" + specialIds.join(", ") + ").");
+    }
+
     // ── BƯỚC 1: Tính Công, Đi trễ, Về sớm cho từng record ──────────────
-    const computed = records.map(record => {
+    const computed = filtered.map(record => {
+
 
       let checkInStr  = this._formatTime(record.checkIn);
       let checkOutStr = this._formatTime(record.checkOut);
