@@ -49,7 +49,7 @@ const AttendanceService = {
         const excelData = ExcelImporter.readAttendanceData(excelFile);
 
         // 2b. Parse raw data -> AttendanceRecord[]
-        const records = AttendanceParser.parse(excelData.values);
+        const records = AttendanceParser.parse(excelData.values, excelData.displayValues);
 
         Logger.log("Parsed Records : " + records.length + " | File: " + excelFile.getName());
 

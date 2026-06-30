@@ -9,7 +9,7 @@ const AttendanceParser = {
   /**
    * Parse toàn bộ dữ liệu
    */
-  parse(values) {
+  parse(values, displayValues) {
 
     const records = [];
 
@@ -17,12 +17,13 @@ const AttendanceParser = {
     for (let i = 2; i < values.length; i++) {
 
       const row = values[i];
+      const displayRow = displayValues ? displayValues[i] : row;
 
       // Bỏ dòng rỗng
       if (!row[1]) continue;
 
       records.push(
-        this.parseRow(row)
+        this.parseRow(row, displayRow)
       );
 
     }
@@ -34,7 +35,7 @@ const AttendanceParser = {
   /**
    * Parse 1 dòng Excel
    */
-  parseRow(row) {
+  parseRow(row, displayRow) {
 
     return {
 
@@ -46,28 +47,28 @@ const AttendanceParser = {
 
       department: row[3],
 
-      date: row[4],
+      date: row[4], // Giữ Date object cho cột Ngày
 
       dayOfWeek: row[5],
 
-      punches: this.extractPunches(row)
+      punches: this.extractPunches(row, displayRow)
 
     };
 
   },
 
   /**
-   * Lấy tất cả lần chấm
+   * Lấy tất cả lần chấm (dùng chuỗi hiển thị để tránh bug múi giờ)
    */
-  extractPunches(row) {
+  extractPunches(row, displayRow) {
 
     const punches = [];
 
     for (let i = 6; i <= 9; i++) {
 
-      if (row[i]) {
+      if (displayRow[i]) {
 
-        punches.push(row[i]);
+        punches.push(displayRow[i]);
 
       }
 

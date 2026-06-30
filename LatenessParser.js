@@ -19,10 +19,11 @@ const LatenessParser = {
    * Parse toàn bộ dữ liệu từ một file
    * Bỏ 2 dòng đầu (tiêu đề + header)
    *
-   * @param {Array[][]} values - Mảng 2D từ Google Sheet tạm
+   * @param {Array[][]} values - Mảng 2D từ Google Sheet tạm (thô)
+   * @param {Array[][]} displayValues - Mảng 2D chuỗi hiển thị
    * @returns {Object[]} Mảng LatenessRecord
    */
-  parse(values) {
+  parse(values, displayValues) {
 
     const records = [];
 
@@ -30,11 +31,12 @@ const LatenessParser = {
     for (let i = 2; i < values.length; i++) {
 
       const row = values[i];
+      const displayRow = displayValues ? displayValues[i] : row;
 
       // Bỏ dòng rỗng (kiểm tra cột Mã NV)
       if (!row[1] && row[1] !== 0) continue;
 
-      const record = this.parseRow(row);
+      const record = this.parseRow(row, displayRow);
 
       if (record) records.push(record);
 
@@ -49,10 +51,11 @@ const LatenessParser = {
   /**
    * Parse 1 dòng Excel thành LatenessRecord
    *
-   * @param {Array} row - Một dòng dữ liệu
+   * @param {Array} row - Dòng dữ liệu thô
+   * @param {Array} displayRow - Dòng dữ liệu hiển thị (chuỗi)
    * @returns {Object|null} LatenessRecord hoặc null nếu không hợp lệ
    */
-  parseRow(row) {
+  parseRow(row, displayRow) {
 
     const employeeId = row[1] ? row[1].toString().trim() : null;
 
@@ -61,11 +64,11 @@ const LatenessParser = {
     return {
       employeeId:   employeeId,
       employeeName: row[2] ? row[2].toString().trim() : "",
-      department:   row[3] ? row[3].toString().trim() : "",  // Phòng Ban — bạn tự điền
-      date:         row[4],                                   // Date object hoặc string
+      department:   row[3] ? row[3].toString().trim() : "",
+      date:         row[4],                                   // Giữ nguyên kiểu Date hoặc string
       dayOfWeek:    row[5] ? row[5].toString().trim() : "",
-      checkIn:      row[6] || null,                           // Giờ vào (time/string/null)
-      checkOut:     row[7] || null                            // Giờ ra  (time/string/null)
+      checkIn:      displayRow[6] || null,                    // Dùng chuỗi hiển thị để tránh lỗi múi giờ
+      checkOut:     displayRow[7] || null                     // Dùng chuỗi hiển thị để tránh lỗi múi giờ
     };
 
   }

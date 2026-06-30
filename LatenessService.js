@@ -52,8 +52,8 @@ const LatenessService = {
         const excelData = ExcelImporter.readAttendanceData(excelFile);
         tmpIds.push(excelData.spreadsheetId);
 
-        // 2b. Parse → LatenessRecord[]
-        const records = LatenessParser.parse(excelData.values);
+        // 2b. Parse → LatenessRecord[] (Truyền cả mảng hiển thị)
+        const records = LatenessParser.parse(excelData.values, excelData.displayValues);
 
         Logger.log("Parsed : " + records.length + " records | " + excelFile.getName());
 

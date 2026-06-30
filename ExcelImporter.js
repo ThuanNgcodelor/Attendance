@@ -128,13 +128,14 @@ const ExcelImporter = {
 
     Logger.log("Reading Temporary Sheet : " + spreadsheet.getName());
 
-    const sheet  = SheetService.getFirstSheet(spreadsheet);
-    const values = SheetService.getValues(sheet);
+    const sheet = SheetService.getFirstSheet(spreadsheet);
+    const data  = SheetService.getValuesAndDisplay(sheet);
 
-    Logger.log("Total Rows Read : " + values.length);
+    Logger.log("Total Rows Read : " + data.values.length);
 
     return {
-      values,
+      values: data.values,
+      displayValues: data.displayValues,
       spreadsheetId: spreadsheet.getId()
     };
 
