@@ -225,3 +225,58 @@ function uploadFileToLatenessFolder(fileName, base64Data) {
   }
 }
 
+/**
+ * API lấy dữ liệu Data Marts cho Web Dashboard
+ */
+function getDashboardData() {
+  try {
+    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const empSheet = spreadsheet.getSheetByName("Employee_Summary");
+    const deptSheet = spreadsheet.getSheetByName("Department_Summary");
+
+    if (!empSheet || !deptSheet) {
+      return { error: "Không tìm thấy dữ liệu Dashboard. Vui lòng chạy Tổng Hợp Đi Trễ trước để sinh dữ liệu." };
+    }
+
+    const empData = empSheet.getDataRange().getValues();
+    const deptData = deptSheet.getDataRange().getValues();
+    
+    // Nếu chỉ có header
+    if (empData.length <= 1 || deptData.length <= 1) {
+      return { success: true, employees: [], departments: [] };
+    }
+
+    // Loại bỏ header
+    empData.shift();
+    deptData.shift();
+
+    // Lấy 500 dòng Employee mới nhất (hoặc tất cả) để tránh quá tải JSON
+    const employees = empData.map(row => ({
+      month: row[0],
+      employeeId: row[1],
+      employeeName: row[2],
+      department: row[3],
+      totalCong: row[4],
+      lateCount: row[5],
+      earlyCount: row[6],
+      lateMinutes: row[7],
+      earlyMinutes: row[8]
+    }));
+
+    const departments = deptData.map(row => ({
+      month: row[0],
+      department: row[1],
+      totalEmployees: row[2],
+      totalCong: row[3],
+      lateCount: row[4],
+      avgLateMinutes: row[5]
+    }));
+
+    return { success: true, employees, departments };
+
+  } catch (error) {
+    Logger.log("API getDashboardData ERROR: " + error.toString());
+    return { error: error.message };
+  }
+}
+

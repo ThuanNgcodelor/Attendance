@@ -5,13 +5,14 @@
   <meta charset="utf-8">
   <title>HRM Attendance System</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
   <?!= include('Style'); ?>
 </head>
 
 <body>
   <div class="container">
     <div class="row justify-content-center">
-      <div class="col-md-9 col-lg-7">
+      <div class="col-md-11 col-lg-10 col-xl-10" id="app-wrapper">
 
         <!-- Brand Header -->
         <div class="brand-container">
@@ -33,12 +34,16 @@
           </button>
           <button class="tab-btn" id="tab-lateness" onclick="switchTab('lateness')" role="tab">
             <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="me-2">
-              <path
-                d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z" />
-              <path
-                d="M7 5.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0zM7 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0z" />
+              <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z" />
+              <path d="M7 5.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0zM7 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0z" />
             </svg>
             Tổng Hợp Đi Trễ
+          </button>
+          <button class="tab-btn" id="tab-dashboard" onclick="switchTab('dashboard')" role="tab">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="me-2">
+              <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
+            </svg>
+            Dashboard
           </button>
         </div>
 
@@ -212,6 +217,99 @@
 
             </div>
           </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════
+             TAB 3: DASHBOARD
+        ═══════════════════════════════════════════════════ -->
+        <div class="tab-panel d-none" id="panel-dashboard">
+          
+          <!-- Dashboard Controls -->
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="m-0 fw-bold text-dark">Thống Kê Tổng Quan</h3>
+            <button class="btn btn-primary-hrm btn-sm" onclick="loadDashboard()">
+              <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="me-1"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
+              Làm mới dữ liệu
+            </button>
+          </div>
+
+          <!-- Loader -->
+          <div id="dashboard-loader" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <div class="mt-3 text-muted">Đang tải dữ liệu từ Google Sheets...</div>
+          </div>
+
+          <div id="dashboard-content" class="d-none">
+            <!-- Scorecards Row -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-3">
+                <div class="scorecard bg-white p-3 rounded shadow-sm border-start border-4 border-primary h-100">
+                  <div class="text-muted small fw-bold text-uppercase mb-1">Tổng Nhân Sự</div>
+                  <h2 class="m-0 fw-bold text-dark" id="kpi-emp">0</h2>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="scorecard bg-white p-3 rounded shadow-sm border-start border-4 border-success h-100">
+                  <div class="text-muted small fw-bold text-uppercase mb-1">Tổng Giờ Công</div>
+                  <h2 class="m-0 fw-bold text-dark" id="kpi-cong">0</h2>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="scorecard bg-white p-3 rounded shadow-sm border-start border-4 border-warning h-100">
+                  <div class="text-muted small fw-bold text-uppercase mb-1">Lượt Đi Trễ</div>
+                  <h2 class="m-0 fw-bold text-dark" id="kpi-late-count">0</h2>
+                </div>
+              </div>
+              <div class="col-md-3">
+                <div class="scorecard bg-white p-3 rounded shadow-sm border-start border-4 border-danger h-100">
+                  <div class="text-muted small fw-bold text-uppercase mb-1">Phút Đi Trễ</div>
+                  <h2 class="m-0 fw-bold text-dark" id="kpi-late-min">0</h2>
+                </div>
+              </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-8">
+                <div class="bg-white p-3 rounded shadow-sm h-100">
+                  <h6 class="fw-bold mb-3">Top 5 Phòng Ban Đi Trễ Nhiều Nhất (Phút)</h6>
+                  <div id="chart-dept-late" style="min-height: 300px;"></div>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="bg-white p-3 rounded shadow-sm h-100">
+                  <h6 class="fw-bold mb-3">Tỷ lệ Chuyên cần</h6>
+                  <div id="chart-donut" class="d-flex justify-content-center align-items-center" style="min-height: 300px;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Table Row -->
+            <div class="row g-3">
+              <div class="col-12">
+                <div class="bg-white p-3 rounded shadow-sm">
+                  <h6 class="fw-bold mb-3 text-danger">⚠️ Kỷ Luật: Top 10 Cá Nhân Đi Trễ Nhiều Nhất</h6>
+                  <div class="table-responsive">
+                    <table class="table table-hover table-sm border align-middle">
+                      <thead class="table-light">
+                        <tr>
+                          <th>Mã NV</th>
+                          <th>Họ Tên</th>
+                          <th>Phòng Ban</th>
+                          <th class="text-center">Số Lần Trễ</th>
+                          <th class="text-center">Tổng Phút Trễ</th>
+                        </tr>
+                      </thead>
+                      <tbody id="table-late-emp">
+                        <!-- Dynamic content -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
         </div>
 
         <!-- Footer -->

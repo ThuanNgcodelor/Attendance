@@ -29,11 +29,18 @@
   }
 
   // ─── Tab Switching ────────────────────────────────────────────────────────
+  let dashboardLoaded = false;
+  
   function switchTab(tab) {
-    ['attendance', 'lateness'].forEach(t => {
+    ['attendance', 'lateness', 'dashboard'].forEach(t => {
       document.getElementById('panel-' + t).classList.toggle('d-none', t !== tab);
       document.getElementById('tab-' + t).classList.toggle('active', t === tab);
     });
+
+    if (tab === 'dashboard' && !dashboardLoaded) {
+      loadDashboard();
+      dashboardLoaded = true;
+    }
   }
 
   // ─── File Handling (Tab Attendance) ──────────────────────────────────────
@@ -185,6 +192,106 @@
 
     } catch (err) {
       onFailure('lat', err);
+    }
+  }
+
+  // ─── Run Dashboard ────────────────────────────────────────────────────────
+  let chartDept = null;
+  let chartDonut = null;
+
+  async function loadDashboard() {
+    const loader = document.getElementById('dashboard-loader');
+    const content = document.getElementById('dashboard-content');
+    
+    loader.classList.remove('d-none');
+    content.classList.add('d-none');
+
+    try {
+      const res = await runGoogleScript('getDashboardData');
+      
+      if (res.error) {
+        alert(res.error);
+        loader.classList.add('d-none');
+        return;
+      }
+      
+      const empData = res.employees;
+      const deptData = res.departments;
+      
+      if (empData.length === 0 && deptData.length === 0) {
+        alert("Chưa có dữ liệu. Vui lòng chạy tính năng 'Tổng Hợp Đi Trễ' trước.");
+        loader.classList.add('d-none');
+        return;
+      }
+
+      // Calculate KPIs
+      const totalEmp = empData.length;
+      let totalCong = 0;
+      let totalLateCount = 0;
+      let totalLateMin = 0;
+      
+      empData.forEach(e => {
+        totalCong += Number(e.totalCong) || 0;
+        totalLateCount += Number(e.lateCount) || 0;
+        totalLateMin += Number(e.lateMinutes) || 0;
+      });
+      
+      document.getElementById('kpi-emp').textContent = totalEmp.toLocaleString();
+      document.getElementById('kpi-cong').textContent = totalCong.toLocaleString();
+      document.getElementById('kpi-late-count').textContent = totalLateCount.toLocaleString();
+      document.getElementById('kpi-late-min').textContent = totalLateMin.toLocaleString();
+      
+      // Dept Chart Data (Top 5)
+      const topDepts = [...deptData].sort((a,b) => b.totalLateCount - a.totalLateCount).slice(0, 5);
+      const deptNames = topDepts.map(d => d.department || 'Khác');
+      const deptLates = topDepts.map(d => d.totalLateCount);
+      
+      if (chartDept) chartDept.destroy();
+      const optionsDept = {
+        series: [{ name: 'Lượt trễ', data: deptLates }],
+        chart: { type: 'bar', height: 300, toolbar: { show: false } },
+        plotOptions: { bar: { horizontal: true, borderRadius: 4, dataLabels: { position: 'top' } } },
+        colors: ['#f59e0b'],
+        dataLabels: { enabled: true, offsetX: -6, style: { fontSize: '12px', colors: ['#fff'] } },
+        xaxis: { categories: deptNames }
+      };
+      chartDept = new ApexCharts(document.querySelector("#chart-dept-late"), optionsDept);
+      chartDept.render();
+      
+      // Donut Chart
+      if (chartDonut) chartDonut.destroy();
+      const optionsDonut = {
+        series: [totalCong, totalLateCount],
+        labels: ['Ngày đúng giờ', 'Ngày đi trễ'],
+        chart: { type: 'donut', height: 300 },
+        colors: ['#10b981', '#f59e0b'],
+        dataLabels: { enabled: false },
+        plotOptions: { pie: { donut: { size: '65%' } } }
+      };
+      chartDonut = new ApexCharts(document.querySelector("#chart-donut"), optionsDonut);
+      chartDonut.render();
+      
+      // Table Data
+      const topEmps = [...empData].sort((a,b) => b.lateMinutes - a.lateMinutes).slice(0, 10);
+      let tbody = '';
+      topEmps.forEach(e => {
+        if(Number(e.lateMinutes) === 0) return;
+        tbody += `<tr>
+          <td>${e.employeeId}</td>
+          <td><strong>${e.employeeName}</strong></td>
+          <td>${e.department}</td>
+          <td class="text-center">${e.lateCount}</td>
+          <td class="text-center text-danger fw-bold">${e.lateMinutes}</td>
+        </tr>`;
+      });
+      document.getElementById('table-late-emp').innerHTML = tbody || '<tr><td colspan="5" class="text-center">Không có dữ liệu đi trễ</td></tr>';
+      
+      loader.classList.add('d-none');
+      content.classList.remove('d-none');
+      
+    } catch (err) {
+      alert("Lỗi tải Dashboard: " + (err.message || err.toString()));
+      loader.classList.add('d-none');
     }
   }
 
