@@ -30,9 +30,10 @@ const LatenessCalculator = {
       return [];
     }
 
-    // Đọc giờ chuẩn từ Settings Sheet
-    const standardIn  = Config.getStandardCheckIn();   // "07:30"
-    const standardOut = Config.getStandardCheckOut();  // "16:30"
+    // Đọc giờ chuẩn từ Settings Sheet và chuẩn hóa về "HH:mm"
+    // (Google Sheets có thể trả về Date object thay vì string "07:30")
+    const standardIn  = this._formatTime(Config.getStandardCheckIn())  || "07:30";
+    const standardOut = this._formatTime(Config.getStandardCheckOut()) || "16:30";
 
     Logger.log("LatenessCalculator: standardIn=" + standardIn + " | standardOut=" + standardOut);
 
