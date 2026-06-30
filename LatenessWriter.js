@@ -54,10 +54,73 @@ const LatenessWriter = {
     }
 
     // ── OVERWRITE: Xóa toàn bộ nội dung cũ ─────────────────────────────
-    // Để chuyển sang APPEND (tích luỹ nhiều tháng):
-    //   1. Comment dòng sheet.clearContents() bên dưới
-    //   2. Bỏ comment phần "Kiểm tra header" bên dưới
     sheet.clearContents();
+
+    // Ghi header + data + format (dùng chung với writeToArchive)
+    this._applySheetFormat(sheet, results);
+
+    Logger.log("LatenessWriter: Ghi " + results.length + " dòng vào Sheet \"" + SHEETS.LATENESS + "\".");
+
+  },
+
+  /**
+   * Tạo file Google Sheet tổng hợp và lưu vào folder "Archiver Tổng hợp"
+   *
+   * Tên file: "TONGHOP_<dateRange>" — VD: "TONGHOP_01-May-26 - 31-May-26"
+   * File này chứa đúng 11 cột, format sạch, sẵn sàng xem trực tiếp trên Drive.
+   *
+   * File gốc (TCHC.xlsx, XNK.xlsx...) KHÔNG bị xóa hay di chuyển.
+   *
+   * @param {Object[]} results   - Mảng LatenessResult từ LatenessCalculator
+   * @param {string}   dateRange - Khoảng ngày (VD: "01-May-26 - 31-May-26")
+   * @param {Folder}   archiveFolder - Folder "Archiver Tổng hợp"
+   */
+  writeToArchive(results, dateRange, archiveFolder) {
+
+    if (!results || results.length === 0) {
+      Logger.log("LatenessWriter.writeToArchive: Không có dữ liệu để archive.");
+      return;
+    }
+
+    const fileName = "TONGHOP_" + dateRange;
+
+    Logger.log("LatenessWriter: Tạo file archive \"" + fileName + "\"...");
+
+    // Tạo Google Spreadsheet mới
+    const newSpreadsheet = SpreadsheetApp.create(fileName);
+    const sheet          = newSpreadsheet.getActiveSheet();
+    sheet.setName("Tổng hợp");
+
+    // Áp dụng format và ghi data
+    this._applySheetFormat(sheet, results);
+
+    // Move file vào folder "Archiver Tổng hợp"
+    const file = DriveApp.getFileById(newSpreadsheet.getId());
+    archiveFolder.addFile(file);
+
+    // Gỡ file khỏi root Drive (tránh trùng lặp)
+    const parents = file.getParents();
+    while (parents.hasNext()) {
+      const parent = parents.next();
+      if (parent.getId() !== archiveFolder.getId()) {
+        parent.removeFile(file);
+      }
+    }
+
+    Logger.log("LatenessWriter: Archive saved → \"" + fileName + "\" trong folder \"" + archiveFolder.getName() + "\".");
+
+  },
+
+  /**
+   * Áp dụng format và ghi data vào 1 sheet bất kỳ
+   * Dùng chung cho write() (Sheet Lateness) và writeToArchive() (file mới)
+   *
+   * @param {Sheet}    sheet   - Google Sheet object
+   * @param {Object[]} results - Mảng LatenessResult
+   */
+  _applySheetFormat(sheet, results) {
+
+    const tz = Session.getScriptTimeZone();
 
     // ── HEADER ──────────────────────────────────────────────────────────
     const headerRange = sheet.getRange(1, 1, 1, this.NUM_COLS);
@@ -72,20 +135,18 @@ const LatenessWriter = {
     sheet.setRowHeight(1, 32);
 
     // ── DATA ─────────────────────────────────────────────────────────────
-    const tz = Session.getScriptTimeZone();
-
     const output = results.map(r => [
-      this._formatDate(r.date, tz),  // Ngày: dd/MM/yyyy
-      r.employeeId,                   // Mã NV
-      r.employeeName,                 // Họ tên
-      r.department,                   // Phòng ban
-      r.checkIn,                      // Giờ vào ("HH:mm" hoặc 0)
-      r.checkOut,                     // Giờ ra  ("HH:mm" hoặc 0)
-      r.congValue,                    // Công (0 hoặc 1)
-      r.lateMinutes,                  // Đi trễ (phút)
-      r.earlyMinutes,                 // Về sớm (phút)
-      r.lateFrequency,                // Tần suất đi trễ
-      r.earlyFrequency                // Tần suất về sớm
+      this._formatDate(r.date, tz),
+      r.employeeId,
+      r.employeeName,
+      r.department,
+      r.checkIn,
+      r.checkOut,
+      r.congValue,
+      r.lateMinutes,
+      r.earlyMinutes,
+      r.lateFrequency,
+      r.earlyFrequency
     ]);
 
     const dataRange = sheet.getRange(2, 1, output.length, this.NUM_COLS);
@@ -94,35 +155,28 @@ const LatenessWriter = {
     dataRange.setBorder(true, true, true, true, true, true,
       "#cccccc", SpreadsheetApp.BorderStyle.SOLID);
 
-    // Căn giữa: Ngày, Mã NV, Giờ vào/ra, Công, Đi trễ, Về sớm, Tần suất
-    sheet.getRange(2, 1, output.length, 2).setHorizontalAlignment("center"); // Ngày, Mã NV
-    sheet.getRange(2, 5, output.length, 7).setHorizontalAlignment("center"); // Giờ vào → Tần suất về sớm
-
-    // Căn trái: Họ tên, Phòng ban
+    sheet.getRange(2, 1, output.length, 2).setHorizontalAlignment("center");
+    sheet.getRange(2, 5, output.length, 7).setHorizontalAlignment("center");
     sheet.getRange(2, 3, output.length, 2).setHorizontalAlignment("left");
 
-    // Chiều cao dòng data
     for (let i = 2; i <= output.length + 1; i++) {
       sheet.setRowHeight(i, 22);
     }
 
     // ── COLUMN WIDTHS ────────────────────────────────────────────────────
-    sheet.setColumnWidth(1,  105);  // Ngày
-    sheet.setColumnWidth(2,  75);   // Mã NV
-    sheet.setColumnWidth(3,  170);  // Họ tên
-    sheet.setColumnWidth(4,  90);   // Phòng ban
-    sheet.setColumnWidth(5,  75);   // Giờ vào
-    sheet.setColumnWidth(6,  75);   // Giờ ra
-    sheet.setColumnWidth(7,  50);   // Công
-    sheet.setColumnWidth(8,  95);   // Đi trễ (phút)
-    sheet.setColumnWidth(9,  95);   // Về sớm (phút)
-    sheet.setColumnWidth(10, 125);  // Tần suất đi trễ
-    sheet.setColumnWidth(11, 130);  // Tần suất về sớm
+    sheet.setColumnWidth(1,  105);
+    sheet.setColumnWidth(2,  75);
+    sheet.setColumnWidth(3,  170);
+    sheet.setColumnWidth(4,  90);
+    sheet.setColumnWidth(5,  75);
+    sheet.setColumnWidth(6,  75);
+    sheet.setColumnWidth(7,  50);
+    sheet.setColumnWidth(8,  95);
+    sheet.setColumnWidth(9,  95);
+    sheet.setColumnWidth(10, 125);
+    sheet.setColumnWidth(11, 130);
 
-    // Freeze header row
     sheet.setFrozenRows(1);
-
-    Logger.log("LatenessWriter: Ghi " + output.length + " dòng vào Sheet \"" + SHEETS.LATENESS + "\".");
 
   },
 
@@ -153,3 +207,4 @@ const LatenessWriter = {
   }
 
 };
+

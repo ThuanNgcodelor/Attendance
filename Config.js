@@ -174,6 +174,19 @@ const Config = {
    */
   getStandardCheckOut() {
     return this.get("STANDARD_CHECKOUT") || "16:30";
+  },
+
+  /**
+   * Folder lưu file Google Sheet tổng hợp sau khi xử lý Lateness
+   * (folder tên "Archiver Tổng hợp" trên Drive)
+   * Cấu hình trong Settings: LATENESS_ARCHIVE_FOLDER_ID = "<Folder ID>"
+   *
+   * @returns {Folder}
+   */
+  getLatenessArchiveFolder() {
+    const folderId = this.get("LATENESS_ARCHIVE_FOLDER_ID");
+    if (!folderId) throw new Error("Config: LATENESS_ARCHIVE_FOLDER_ID chưa được cấu hình trong Settings.");
+    return DriveApp.getFolderById(folderId);
   }
 
 };

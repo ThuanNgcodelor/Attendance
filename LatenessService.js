@@ -5,13 +5,12 @@
  *
  * Pipeline (độc lập với AttendanceService):
  *  1. Tìm TẤT CẢ file trong Lateness Folder (LATENESS_FOLDER_ID)
- *  2. Với mỗi file:
- *     a. Convert → Google Sheet tạm (TMP_)
- *     b. Parse dữ liệu → LatenessRecord[]
- *     c. Gom vào allRecords[]
- *  3. Tính toán LatenessCalculator.build(allRecords) → LatenessResult[]
- *  4. Ghi toàn bộ kết quả vào Sheet "Lateness" (LatenessWriter)
- *  5. Xóa các Google Sheet tạm (TMP_) khỏi Drive
+ *  2. Với mỗi file: Convert → TMP_ → Parse → Gom allRecords[]
+ *  3. Tính toán: LatenessCalculator.build(allRecords) → LatenessResult[]
+ *  4. Ghi vào Sheet "Lateness" trong HRM Database (datasource Looker Studio)
+ *  5. Tạo file Google Sheet tổng hợp → lưu vào folder "Archiver Tổng hợp"
+ *  6. Xóa các Google Sheet tạm (TMP_) khỏi Drive
+ *     (File gốc TCHC.xlsx... được GIỮ NGUYÊN trong Lateness Folder)
  *
  * Entry point: runLateness() trong Main.js
  * ==========================================
@@ -75,10 +74,21 @@ const LatenessService = {
 
         const results = LatenessCalculator.build(allRecords);
 
-        // 4. Ghi Sheet "Lateness"
+        // 4. Ghi Sheet "Lateness" trong HRM Database (datasource cho Looker Studio)
         LatenessWriter.write(results);
-
         Logger.log("Sheet \"Lateness\" updated. Total rows : " + results.length);
+
+        // 5. Tạo file Google Sheet tổng hợp → lưu vào folder "Archiver Tổng hợp"
+        try {
+
+          const archiveFolder = Config.getLatenessArchiveFolder();
+          const dateRange     = this._buildDateRange(results);
+          LatenessWriter.writeToArchive(results, dateRange, archiveFolder);
+
+        } catch (archiveError) {
+          // Không dừng toàn bộ nếu archive lỗi — chỉ log cảnh báo
+          Logger.log("Warning (Archive): " + archiveError.toString());
+        }
 
       } else {
 
@@ -112,6 +122,40 @@ const LatenessService = {
       throw error;
 
     }
+
+  },
+
+  // ─────────────────────────────────────────
+  // PRIVATE HELPERS
+  // ─────────────────────────────────────────
+
+  /**
+   * Tính khoảng ngày từ LatenessResult[] để đặt tên file archive
+   * VD: "01-May-26 - 31-May-26"
+   *
+   * @param {Object[]} results - Mảng LatenessResult
+   * @returns {string}
+   */
+  _buildDateRange(results) {
+
+    if (!results || results.length === 0) return "TONGHOP";
+
+    const tz = Session.getScriptTimeZone();
+
+    const dates = results
+      .map(r => r.date)
+      .filter(d => d)
+      .map(d => (d instanceof Date) ? d : new Date(d.toString()))
+      .filter(d => !isNaN(d.getTime()));
+
+    if (dates.length === 0) return "TONGHOP";
+
+    const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+
+    const fmt = d => Utilities.formatDate(d, tz, "dd-MMM-yy");
+
+    return fmt(minDate) + " - " + fmt(maxDate);
 
   }
 
