@@ -1,6 +1,6 @@
 <script>
   // ─── State ───────────────────────────────────────────────────────────────
-  let selectedFile = null;
+  let attendanceFiles = [];
   let latenessFiles = [];
 
   // ─── Utility: Promisify google.script.run ───────────────────────────────
@@ -50,10 +50,10 @@
     ['dragleave', 'drop'].forEach(ev => zoneAtt.addEventListener(ev, () => zoneAtt.classList.remove('dragover'), false));
 
     zoneAtt.addEventListener('drop', e => {
-      if (e.dataTransfer.files.length > 0) setFile(e.dataTransfer.files[0]);
+      if (e.dataTransfer.files.length > 0) addAttendanceFiles(e.dataTransfer.files);
     }, false);
     inputAtt.addEventListener('change', e => {
-      if (e.target.files.length > 0) setFile(e.target.files[0]);
+      if (e.target.files.length > 0) addAttendanceFiles(e.target.files);
     }, false);
 
     // Lateness Zone (Multi-file)
@@ -75,23 +75,66 @@
   });
 
   // --- Attendance ---
-  function setFile(file) {
-    if (!/(\.xlsx|\.xlsm|\.xls)$/i.test(file.name)) {
-      showResult('att', false, 'Chỉ hỗ trợ file Excel (.xlsx, .xlsm, .xls)');
-      return;
+  function addAttendanceFiles(files) {
+    const allowed = /(\.xlsx|\.xlsm|\.xls)$/i;
+    let added = false;
+    for (let i = 0; i < files.length; i++) {
+      if (allowed.test(files[i].name)) {
+        if (!attendanceFiles.find(f => f.name === files[i].name)) {
+          attendanceFiles.push(files[i]);
+          added = true;
+        }
+      }
     }
-    selectedFile = file;
-    document.getElementById('fileName-att').textContent = file.name;
-    document.getElementById('fileBadge-att').classList.remove('d-none');
-    document.getElementById('btn-att').disabled = false;
-    hideResult('att');
+    if (added) renderAttendanceFiles();
   }
 
-  function removeFile() {
-    selectedFile = null;
-    document.getElementById('fileInput-att').value = '';
-    document.getElementById('fileBadge-att').classList.add('d-none');
-    document.getElementById('btn-att').disabled = true;
+  function removeAttendanceFile(index) {
+    attendanceFiles.splice(index, 1);
+    renderAttendanceFiles();
+  }
+
+  function clearAttendanceFiles() {
+    attendanceFiles = [];
+    renderAttendanceFiles();
+  }
+
+  function renderAttendanceFiles() {
+    const listEl = document.getElementById('fileList-att');
+    const btn = document.getElementById('btn-att');
+
+    if (attendanceFiles.length === 0) {
+      listEl.classList.add('d-none');
+      btn.disabled = true;
+      document.getElementById('fileInput-att').value = '';
+      return;
+    }
+
+    listEl.classList.remove('d-none');
+    btn.disabled = false;
+
+    let html = `
+      <div class="file-list-header">
+        <span>Đã chọn ${attendanceFiles.length} file</span>
+        <span class="file-list-clear" onclick="clearAttendanceFiles()">Xóa tất cả</span>
+      </div>
+    `;
+
+    attendanceFiles.forEach((file, idx) => {
+      html += `
+        <div class="file-list-item">
+          <div class="file-list-name">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5z"/></svg>
+            ${file.name}
+            <span class="file-list-size">(${formatBytes(file.size)})</span>
+          </div>
+          <div class="file-list-remove" onclick="removeAttendanceFile(${idx})">×</div>
+        </div>
+      `;
+    });
+
+    listEl.innerHTML = html;
+    hideResult('att');
   }
 
   // --- Lateness (Multi-file) ---
@@ -160,19 +203,31 @@
 
   // ─── Run Attendance ───────────────────────────────────────────────────────
   async function runAttendanceUI() {
-    if (!selectedFile) return;
+    if (attendanceFiles.length === 0) return;
 
     setRunning('att', true);
-    updateProgress('att', 15, 'Đang đọc file...');
 
     try {
-      const base64 = await readFileAsBase64(selectedFile);
-      updateProgress('att', 40, 'Đang xử lý Chấm Công (có thể mất 3-5 phút)...');
+      // 1. Dọn dẹp Import Folder cũ
+      updateProgress('att', 10, 'Đang làm sạch thư mục Import cũ...');
+      await runGoogleScript('clearImportFolder');
 
-      const res = await runGoogleScript('uploadAndProcessFile', selectedFile.name, base64);
+      // 2. Upload tuần tự từng file
+      for (let i = 0; i < attendanceFiles.length; i++) {
+        const file = attendanceFiles[i];
+        const pct = 10 + Math.round((i / attendanceFiles.length) * 40); // Tới max 50%
+        updateProgress('att', pct, `Đang upload (${i + 1}/${attendanceFiles.length}): ${file.name}...`);
+
+        const base64 = await readFileAsBase64(file);
+        await runGoogleScript('uploadFileToImportFolder', file.name, base64);
+      }
+
+      // 3. Chạy pipeline xử lý
+      updateProgress('att', 60, 'Đang xử lý Chấm Công (có thể mất 3-5 phút)...');
+      const res = await runGoogleScript('runAttendanceWeb');
 
       updateProgress('att', 100, 'Hoàn thành!');
-      removeFile();
+      clearAttendanceFiles();
       setRunning('att', false);
 
       let links = '';

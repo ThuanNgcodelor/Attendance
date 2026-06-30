@@ -22,36 +22,24 @@ function doGet(e) {
 }
 
 /**
- * API tiếp nhận file Excel từ Frontend, lưu vào Import Folder,
- * thực hiện xử lý chấm công và trả về các link kết quả.
- * 
- * @param {string} fileName - Tên file gốc (VD: "Cong thu nghiem.xlsx")
- * @param {string} base64Data - Dữ liệu file mã hóa base64 từ client
+ * API cho Tab "Xử lý Chấm Công" — gọi từ Script.html (runAttendanceUI)
+ * Chạy toàn bộ pipeline Attendance và trả về các link kết quả.
+ *
  * @returns {Object} Đường dẫn các file kết quả và thư mục lưu trữ
  */
-function uploadAndProcessFile(fileName, base64Data) {
+function runAttendanceWeb() {
   try {
-    Logger.log("API uploadAndProcessFile: Bắt đầu tiếp nhận file: " + fileName);
+    Logger.log("API runAttendanceWeb: Bắt đầu xử lý Chấm Công...");
     
-    // 1. Decode base64 và tạo Blob file Excel
-    const decodedBytes = Utilities.base64Decode(base64Data);
-    const contentType = getMimeTypeFromFileName(fileName);
-    const blob = Utilities.newBlob(decodedBytes, contentType, fileName);
-    
-    // 2. Lưu file vào Import Folder
-    const importFolder = Config.getImportFolder();
-    const uploadedFile = importFolder.createFile(blob);
-    Logger.log("API uploadAndProcessFile: Đã lưu file vào Import Folder, ID: " + uploadedFile.getId());
-    
-    // 3. Kích hoạt toàn bộ luồng xử lý Backend chấm công
+    // Kích hoạt toàn bộ luồng xử lý Backend chấm công
     AttendanceService.processAttendance();
-    Logger.log("API uploadAndProcessFile: Backend xử lý thành công.");
+    Logger.log("API runAttendanceWeb: Backend xử lý thành công.");
     
-    // 4. Lấy URL của thư mục lưu trữ
+    // Lấy URL của thư mục lưu trữ
     const archiveFolder = Config.getArchiveFolder();      // Thư mục Archive Chấm Công
     const archiveCongFolder = Config.getArchiveCongFolder();  // Thư mục Archive Công
     
-    // 5. Tìm file Bảng Công mới tạo nhất trong thư mục Archive Công để trả về link trực tiếp
+    // Tìm file Bảng Công mới tạo nhất trong thư mục Archive Công để trả về link trực tiếp
     const latestCongFileUrl = getLatestFileInFolder(archiveCongFolder);
     
     return {
@@ -62,8 +50,51 @@ function uploadAndProcessFile(fileName, base64Data) {
     };
     
   } catch (error) {
-    Logger.log("API uploadAndProcessFile ERROR: " + error.toString());
+    Logger.log("API runAttendanceWeb ERROR: " + error.toString());
     throw new Error(error.message || error.toString());
+  }
+}
+
+/**
+ * Xóa toàn bộ file trong thư mục Import trước khi upload file mới.
+ */
+function clearImportFolder() {
+  try {
+    const folder = Config.getImportFolder();
+    const files = folder.getFiles();
+    let count = 0;
+    while (files.hasNext()) {
+      files.next().setTrashed(true);
+      count++;
+    }
+    Logger.log(`API clearImportFolder: Đã xóa ${count} file cũ.`);
+    return true;
+  } catch (error) {
+    Logger.log("API clearImportFolder ERROR: " + error.toString());
+    throw new Error("Không thể làm sạch thư mục Import: " + error.message);
+  }
+}
+
+/**
+ * API tiếp nhận 1 file Chấm Công từ Frontend và lưu vào Import Folder.
+ * 
+ * @param {string} fileName - Tên file gốc
+ * @param {string} base64Data - Dữ liệu file mã hóa base64 từ client
+ */
+function uploadFileToImportFolder(fileName, base64Data) {
+  try {
+    Logger.log("API uploadFileToImportFolder: Đang lưu file " + fileName);
+    const decodedBytes = Utilities.base64Decode(base64Data);
+    const contentType = getMimeTypeFromFileName(fileName);
+    const blob = Utilities.newBlob(decodedBytes, contentType, fileName);
+    
+    const folder = Config.getImportFolder();
+    folder.createFile(blob);
+    
+    return true;
+  } catch (error) {
+    Logger.log("API uploadFileToImportFolder ERROR: " + error.toString());
+    throw new Error("Lỗi khi tải file " + fileName + ": " + error.message);
   }
 }
 
