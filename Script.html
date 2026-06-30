@@ -1,0 +1,202 @@
+<script>
+  // Quản lý biến toàn cục lưu trữ file được chọn
+  let selectedFile = null;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const selectedFileContainer = document.getElementById('selectedFileContainer');
+    const btnProcess = document.getElementById('btnProcess');
+    
+    // Ngăn chặn hành vi kéo thả mặc định của trình duyệt
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      uploadZone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    // Hiệu ứng hover kéo thả
+    ['dragenter', 'dragover'].forEach(eventName => {
+      uploadZone.addEventListener(eventName, () => uploadZone.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      uploadZone.addEventListener(eventName, () => uploadZone.classList.remove('dragover'), false);
+    });
+
+    // Tiếp nhận file thả vào zone
+    uploadZone.addEventListener('drop', handleDrop, false);
+    // Tiếp nhận file qua nút chọn file
+    fileInput.addEventListener('change', handleFileSelect, false);
+  });
+
+  function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files.length > 0) {
+      setFile(files[0]);
+    }
+  }
+
+  function handleFileSelect(e) {
+    const files = e.target.files;
+    if (files.length > 0) {
+      setFile(files[0]);
+    }
+  }
+
+  // Cập nhật giao diện khi chọn file thành công
+  function setFile(file) {
+    const allowedExtensions = /(\.xlsx|\.xlsm|\.xls)$/i;
+    if (!allowedExtensions.exec(file.name)) {
+      showError('Chỉ hỗ trợ file Excel (.xlsx, .xlsm, .xls)');
+      return;
+    }
+
+    selectedFile = file;
+    document.getElementById('selectedFileName').textContent = file.name;
+    document.getElementById('selectedFileContainer').classList.remove('d-none');
+    document.getElementById('btnProcess').disabled = false;
+    hideResult();
+  }
+
+  // Xóa file đã chọn
+  function removeSelectedFile() {
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('selectedFileContainer').classList.add('d-none');
+    document.getElementById('btnProcess').disabled = true;
+  }
+
+  // Bắt đầu xử lý file
+  function processFile() {
+    if (!selectedFile) return;
+
+    // Khóa nút bấm và hiển thị trạng thái đang chạy
+    document.getElementById('btnProcess').disabled = true;
+    document.getElementById('statusContainer').style.display = 'block';
+    updateProgress(15, 'Đang chuẩn bị file...');
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64Data = e.target.result.split(',')[1];
+      updateProgress(35, 'Đang tải file lên Import Folder...');
+      
+      // Gọi lên server xử lý file
+      google.script.run
+        .withSuccessHandler(onSuccess)
+        .withFailureHandler(onFailure)
+        .uploadAndProcessFile(selectedFile.name, base64Data);
+    };
+
+    reader.onerror = function() {
+      showError('Lỗi đọc file từ máy tính.');
+      resetUiState();
+    };
+
+    reader.readAsDataURL(selectedFile);
+  }
+
+  // Cập nhật thanh tiến trình
+  function updateProgress(percent, text) {
+    const progressBar = document.getElementById('progressBar');
+    const statusText = document.getElementById('statusText');
+    progressBar.style.width = percent + '%';
+    statusText.textContent = text;
+  }
+
+  // Reset trạng thái nút & progress
+  function resetUiState() {
+    document.getElementById('btnProcess').disabled = false;
+    document.getElementById('statusContainer').style.display = 'none';
+    updateProgress(0, '');
+  }
+
+  // Xử lý thành công từ server
+  function onSuccess(response) {
+    updateProgress(100, 'Xử lý thành công!');
+    
+    // Hiển thị box kết quả
+    const resultBox = document.getElementById('resultBox');
+    resultBox.style.display = 'block';
+    resultBox.className = 'result-box result-success';
+    
+    document.getElementById('resultTitle').innerHTML = `
+      <svg width="20" height="20" fill="currentColor" class="bi bi-check-circle-fill" viewBox="0 0 16 16">
+        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+      </svg>
+      Đã hoàn thành xử lý dữ liệu chấm công!
+    `;
+
+    // Sinh các link kết quả
+    const linksContainer = document.getElementById('resultLinks');
+    linksContainer.innerHTML = '';
+
+    if (response.congFileUrl) {
+      linksContainer.innerHTML += `
+        <a href="${response.congFileUrl}" target="_blank" class="result-link-item">
+          <svg width="16" height="16" fill="currentColor" class="bi bi-file-earmark-spreadsheet" viewBox="0 0 16 16">
+            <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z"/>
+            <path d="M3 12h10v1h-10v-1zm0-2h10v1h-10v-1zm0-2h10v1h-10v-1zm0-2h10v1h-10v-1z"/>
+          </svg>
+          Mở file Bảng Công mới nhất vừa sinh
+        </a>
+      `;
+    }
+
+    if (response.archiveCongFolderUrl) {
+      linksContainer.innerHTML += `
+        <a href="${response.archiveCongFolderUrl}" target="_blank" class="result-link-item">
+          <svg width="16" height="16" fill="currentColor" class="bi bi-folder2-open" viewBox="0 0 16 16">
+            <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.649 8.334 4 9.5 4H14a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-1.5 1.5H1.5A1.5 1.5 0 0 1 0 11.5v-8A1.5 1.5 0 0 1 1 3.5zM2.5 3a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-6a.5.5 0 0 0-.5-.5H9.5c-1.072 0-1.642-.262-2.033-.712C6.9 4.29 6.485 4 5.264 4H2.5z"/>
+          </svg>
+          Mở thư mục Archive Bảng Công
+        </a>
+      `;
+    }
+
+    if (response.archiveFolderUrl) {
+      linksContainer.innerHTML += `
+        <a href="${response.archiveFolderUrl}" target="_blank" class="result-link-item">
+          <svg width="16" height="16" fill="currentColor" class="bi bi-folder2" viewBox="0 0 16 16">
+            <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.649 8.334 4 9.5 4H14a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-1.5 1.5H1.5A1.5 1.5 0 0 1 0 11.5v-8A1.5 1.5 0 0 1 1 3.5zM2.5 3a.5.5 0 0 0-.5.5v8a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5v-6a.5.5 0 0 0-.5-.5H9.5c-1.072 0-1.642-.262-2.033-.712C6.9 4.29 6.485 4 5.264 4H2.5z"/>
+          </svg>
+          Mở thư mục Archive Chấm Công Gốc
+        </a>
+      `;
+    }
+
+    // Xóa file khỏi hàng đợi
+    removeSelectedFile();
+    resetUiState();
+  }
+
+  // Xử lý lỗi từ server
+  function onFailure(error) {
+    showError('Xử lý thất bại: ' + error.message);
+    resetUiState();
+  }
+
+  function showError(msg) {
+    const resultBox = document.getElementById('resultBox');
+    resultBox.style.display = 'block';
+    resultBox.className = 'result-box result-error';
+    
+    document.getElementById('resultTitle').innerHTML = `
+      <svg width="20" height="20" fill="currentColor" class="bi bi-exclamation-triangle-fill" viewBox="0 0 16 16">
+        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+      </svg>
+      Lỗi Xử Lý
+    `;
+    
+    const linksContainer = document.getElementById('resultLinks');
+    linksContainer.innerHTML = `<span class="text-danger small">${msg}</span>`;
+  }
+
+  function hideResult() {
+    document.getElementById('resultBox').style.display = 'none';
+  }
+</script>
