@@ -49,10 +49,19 @@ const ExcelImporter = {
    * @returns {File[]} Mảng các file tìm được
    */
   findAllExcelFiles() {
+    return this.findAllExcelFilesInFolder(Config.getImportFolder());
+  },
 
-    const folder = Config.getImportFolder();
+  /**
+   * Tìm TẤT CẢ file Excel trong một folder bất kỳ
+   * Dùng cho cả Attendance pipeline (Import Folder) lẫn Lateness pipeline (Lateness Folder)
+   *
+   * @param {Folder} folder - Google Drive Folder object
+   * @returns {File[]} Mảng các file tìm được
+   */
+  findAllExcelFilesInFolder(folder) {
 
-    Logger.log("Import Folder : " + folder.getName());
+    Logger.log("Scanning Folder : " + folder.getName());
 
     const allFiles = [];
 
@@ -72,7 +81,7 @@ const ExcelImporter = {
 
     }
 
-    Logger.log("Total files in Import Folder : " + allFiles.length);
+    Logger.log("Total files in Folder [" + folder.getName() + "] : " + allFiles.length);
 
     return allFiles;
 

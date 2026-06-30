@@ -139,6 +139,41 @@ const Config = {
     const folderId = this.get("ARCHIVE_CONG_FOLDER_ID");
     if (!folderId) throw new Error("Config: ARCHIVE_CONG_FOLDER_ID chưa được cấu hình trong Settings.");
     return DriveApp.getFolderById(folderId);
+  },
+
+  // ─── LATENESS ──────────────────────────────────────────────────────────────
+
+  /**
+   * Folder chứa file chấm công từng phòng ban (TCHC.xlsx, XNK.xlsx...)
+   * Pipeline Lateness đọc từ đây — riêng biệt với Import Folder của Attendance
+   * Cấu hình trong Settings: LATENESS_FOLDER_ID = "<Folder ID>"
+   *
+   * @returns {Folder}
+   */
+  getLatenessFolder() {
+    const folderId = this.get("LATENESS_FOLDER_ID");
+    if (!folderId) throw new Error("Config: LATENESS_FOLDER_ID chưa được cấu hình trong Settings.");
+    return DriveApp.getFolderById(folderId);
+  },
+
+  /**
+   * Giờ vào chuẩn để tính đi trễ (VD: "07:30")
+   * Cấu hình trong Settings: STANDARD_CHECKIN = "07:30"
+   *
+   * @returns {string}
+   */
+  getStandardCheckIn() {
+    return this.get("STANDARD_CHECKIN") || "07:30";
+  },
+
+  /**
+   * Giờ ra chuẩn để tính về sớm (VD: "16:30")
+   * Cấu hình trong Settings: STANDARD_CHECKOUT = "16:30"
+   *
+   * @returns {string}
+   */
+  getStandardCheckOut() {
+    return this.get("STANDARD_CHECKOUT") || "16:30";
   }
 
 };

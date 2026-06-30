@@ -6,11 +6,12 @@
  */
 
 const SHEETS = {
-  DASHBOARD: "Dashboard",
-  SETTINGS: "Settings",
-  EMPLOYEES: "Employees",
+  DASHBOARD:  "Dashboard",
+  SETTINGS:   "Settings",
+  EMPLOYEES:  "Employees",
   ATTENDANCE: "Attendance",
-  LOGS: "Logs"
+  LATENESS:   "Lateness",   // Datasource cho Looker Studio Dashboard
+  LOGS:       "Logs"
 };
 
 const FOLDERS = {
