@@ -74,9 +74,17 @@ const LatenessService = {
 
         const results = LatenessCalculator.build(allRecords);
 
-        // 4. Ghi Sheet "Lateness" trong HRM Database (datasource cho Looker Studio)
+        // 4. Ghi Sheet "Lateness" trong HRM Database (Log chi tiết)
         LatenessWriter.write(results);
         Logger.log("Sheet \"Lateness\" updated. Total rows : " + results.length);
+
+        // 4b. Xây dựng và ghi Summary Data Marts cho Dashboard Looker Studio
+        try {
+          const summaryData = SummaryEngine.build(results);
+          DashboardWriter.write(summaryData);
+        } catch (summaryError) {
+          Logger.log("Warning (Dashboard Data Marts): Lỗi khi tạo Data Marts - " + summaryError.toString());
+        }
 
         // 5. Tạo file Google Sheet tổng hợp → lưu vào folder "Archiver Tổng hợp"
         try {
