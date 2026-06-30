@@ -1,6 +1,33 @@
 <script>
   // ─── State ───────────────────────────────────────────────────────────────
   let selectedFile = null;
+  let latenessFiles = [];
+
+  // ─── Utility: Promisify google.script.run ───────────────────────────────
+  function runGoogleScript(funcName, ...args) {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        [funcName](...args);
+    });
+  }
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result.split(',')[1]);
+      reader.onerror = () => reject(new Error("Lỗi đọc file: " + file.name));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024, dm = 2, sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
 
   // ─── Tab Switching ────────────────────────────────────────────────────────
   function switchTab(tab) {
@@ -12,31 +39,44 @@
 
   // ─── File Handling (Tab Attendance) ──────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function () {
-    const zone  = document.getElementById('uploadZone-att');
-    const input = document.getElementById('fileInput-att');
+    // Attendance Zone
+    const zoneAtt  = document.getElementById('uploadZone-att');
+    const inputAtt = document.getElementById('fileInput-att');
 
-    ['dragenter','dragover','dragleave','drop'].forEach(ev =>
-      zone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }, false)
-    );
-    ['dragenter','dragover'].forEach(ev =>
-      zone.addEventListener(ev, () => zone.classList.add('dragover'), false)
-    );
-    ['dragleave','drop'].forEach(ev =>
-      zone.addEventListener(ev, () => zone.classList.remove('dragover'), false)
-    );
+    ['dragenter','dragover','dragleave','drop'].forEach(ev => {
+      zoneAtt.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+    ['dragenter','dragover'].forEach(ev => zoneAtt.addEventListener(ev, () => zoneAtt.classList.add('dragover'), false));
+    ['dragleave','drop'].forEach(ev => zoneAtt.addEventListener(ev, () => zoneAtt.classList.remove('dragover'), false));
 
-    zone.addEventListener('drop', e => {
-      const files = e.dataTransfer.files;
-      if (files.length > 0) setFile(files[0]);
+    zoneAtt.addEventListener('drop', e => {
+      if (e.dataTransfer.files.length > 0) setFile(e.dataTransfer.files[0]);
+    }, false);
+    inputAtt.addEventListener('change', e => {
+      if (e.target.files.length > 0) setFile(e.target.files[0]);
     }, false);
 
-    input.addEventListener('change', e => {
-      if (e.target.files.length > 0) setFile(e.target.files[0]);
+    // Lateness Zone (Multi-file)
+    const zoneLat  = document.getElementById('uploadZone-lat');
+    const inputLat = document.getElementById('fileInput-lat');
+
+    ['dragenter','dragover','dragleave','drop'].forEach(ev => {
+      zoneLat.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+    ['dragenter','dragover'].forEach(ev => zoneLat.addEventListener(ev, () => zoneLat.classList.add('dragover'), false));
+    ['dragleave','drop'].forEach(ev => zoneLat.addEventListener(ev, () => zoneLat.classList.remove('dragover'), false));
+
+    zoneLat.addEventListener('drop', e => {
+      if (e.dataTransfer.files.length > 0) addLatenessFiles(e.dataTransfer.files);
+    }, false);
+    inputLat.addEventListener('change', e => {
+      if (e.target.files.length > 0) addLatenessFiles(e.target.files);
     }, false);
   });
 
+  // --- Attendance ---
   function setFile(file) {
-    if (!/(\\.xlsx|\\.xlsm|\\.xls)$/i.test(file.name)) {
+    if (!/(\.xlsx|\.xlsm|\.xls)$/i.test(file.name)) {
       showResult('att', false, 'Chỉ hỗ trợ file Excel (.xlsx, .xlsm, .xls)');
       return;
     }
@@ -47,77 +87,146 @@
     hideResult('att');
   }
 
-  function removeFile(id) {
+  function removeFile() {
     selectedFile = null;
     document.getElementById('fileInput-att').value = '';
     document.getElementById('fileBadge-att').classList.add('d-none');
     document.getElementById('btn-att').disabled = true;
   }
 
+  // --- Lateness (Multi-file) ---
+  function addLatenessFiles(files) {
+    const allowed = /(\.xlsx|\.xlsm|\.xls)$/i;
+    let added = false;
+    for (let i = 0; i < files.length; i++) {
+      if (allowed.test(files[i].name)) {
+        // Tránh trùng tên
+        if (!latenessFiles.find(f => f.name === files[i].name)) {
+          latenessFiles.push(files[i]);
+          added = true;
+        }
+      }
+    }
+    if (added) renderLatenessFiles();
+  }
+
+  function removeLatenessFile(index) {
+    latenessFiles.splice(index, 1);
+    renderLatenessFiles();
+  }
+
+  function clearLatenessFiles() {
+    latenessFiles = [];
+    renderLatenessFiles();
+  }
+
+  function renderLatenessFiles() {
+    const listEl = document.getElementById('fileList-lat');
+    const btn = document.getElementById('btn-lat');
+    
+    if (latenessFiles.length === 0) {
+      listEl.classList.add('d-none');
+      btn.disabled = true;
+      document.getElementById('fileInput-lat').value = '';
+      return;
+    }
+    
+    listEl.classList.remove('d-none');
+    btn.disabled = false;
+    
+    let html = `
+      <div class="file-list-header">
+        <span>Đã chọn ${latenessFiles.length} file</span>
+        <span class="file-list-clear" onclick="clearLatenessFiles()">Xóa tất cả</span>
+      </div>
+    `;
+    
+    latenessFiles.forEach((file, idx) => {
+      html += `
+        <div class="file-list-item">
+          <div class="file-list-name">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5z"/></svg>
+            ${file.name}
+            <span class="file-list-size">(${formatBytes(file.size)})</span>
+          </div>
+          <div class="file-list-remove" onclick="removeLatenessFile(${idx})">×</div>
+        </div>
+      `;
+    });
+    
+    listEl.innerHTML = html;
+    hideResult('lat');
+  }
+
   // ─── Run Attendance ───────────────────────────────────────────────────────
-  function runAttendanceUI() {
+  async function runAttendanceUI() {
     if (!selectedFile) return;
 
     setRunning('att', true);
     updateProgress('att', 15, 'Đang đọc file...');
 
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const base64 = e.target.result.split(',')[1];
-      updateProgress('att', 40, 'Đang tải file lên Import Folder...');
+    try {
+      const base64 = await readFileAsBase64(selectedFile);
+      updateProgress('att', 40, 'Đang xử lý Chấm Công (có thể mất 1-2 phút)...');
+      
+      const res = await runGoogleScript('uploadAndProcessFile', selectedFile.name, base64);
+      
+      updateProgress('att', 100, 'Hoàn thành!');
+      removeFile();
+      setRunning('att', false);
 
-      google.script.run
-        .withSuccessHandler(res => onAttendanceSuccess(res))
-        .withFailureHandler(err => onFailure('att', err))
-        .uploadAndProcessFile(selectedFile.name, base64);
-    };
-    reader.onerror = () => { showResult('att', false, 'Lỗi đọc file.'); setRunning('att', false); };
-    reader.readAsDataURL(selectedFile);
-  }
+      let links = '';
+      if (res.congFileUrl) links += linkHtml(res.congFileUrl, '📊 Mở file Bảng Công mới nhất');
+      if (res.archiveCongFolderUrl) links += linkHtml(res.archiveCongFolderUrl, '📁 Thư mục Archive Bảng Công');
+      if (res.archiveFolderUrl) links += linkHtml(res.archiveFolderUrl, '📁 Thư mục Archive Chấm Công');
 
-  function onAttendanceSuccess(res) {
-    updateProgress('att', 100, 'Hoàn thành!');
-    removeFile('att');
-    setRunning('att', false);
-
-    let links = '';
-    if (res.congFileUrl)
-      links += linkHtml(res.congFileUrl, '📊 Mở file Bảng Công mới nhất');
-    if (res.archiveCongFolderUrl)
-      links += linkHtml(res.archiveCongFolderUrl, '📁 Thư mục Archive Bảng Công');
-    if (res.archiveFolderUrl)
-      links += linkHtml(res.archiveFolderUrl, '📁 Thư mục Archive Chấm Công');
-
-    showResult('att', true, 'Xử lý Chấm Công thành công!', links);
+      showResult('att', true, 'Xử lý Chấm Công thành công!', links);
+      
+    } catch (err) {
+      onFailure('att', err);
+    }
   }
 
   // ─── Run Lateness ─────────────────────────────────────────────────────────
-  function runLatenessUI() {
+  async function runLatenessUI() {
+    if (latenessFiles.length === 0) return;
+
     setRunning('lat', true);
-    updateProgress('lat', 20, 'Đang đọc file từ Lateness Folder...');
+    
+    try {
+      // 1. Xóa file cũ trong Lateness Folder để không bị tính trùng
+      updateProgress('lat', 10, 'Đang làm sạch thư mục Lateness cũ...');
+      await runGoogleScript('clearLatenessFolder');
 
-    google.script.run
-      .withSuccessHandler(res => onLatenessSuccess(res))
-      .withFailureHandler(err => onFailure('lat', err))
-      .runLatenessWeb();
-  }
+      // 2. Upload tuần tự từng file
+      for (let i = 0; i < latenessFiles.length; i++) {
+        const file = latenessFiles[i];
+        const pct = 10 + Math.round((i / latenessFiles.length) * 40); // Tới max 50%
+        updateProgress('lat', pct, `Đang upload (${i+1}/${latenessFiles.length}): ${file.name}...`);
+        
+        const base64 = await readFileAsBase64(file);
+        await runGoogleScript('uploadFileToLatenessFolder', file.name, base64);
+      }
 
-  function onLatenessSuccess(res) {
-    updateProgress('lat', 100, 'Hoàn thành!');
-    setRunning('lat', false);
+      // 3. Chạy pipeline tổng hợp
+      updateProgress('lat', 60, 'Đang tính toán Tổng Hợp Đi Trễ / Về Sớm...');
+      const res = await runGoogleScript('runLatenessWeb');
 
-    let links = '';
-    if (res.latenessSheetUrl)
-      links += linkHtml(res.latenessSheetUrl, '📋 Mở Sheet Lateness (HRM Database)');
-    if (res.archiveFileUrl)
-      links += linkHtml(res.archiveFileUrl, '📊 Mở file Tổng hợp mới nhất');
-    if (res.archiveFolderUrl)
-      links += linkHtml(res.archiveFolderUrl, '📁 Thư mục Archiver Tổng hợp');
+      // 4. Xong
+      updateProgress('lat', 100, 'Hoàn thành!');
+      clearLatenessFiles();
+      setRunning('lat', false);
 
-    showResult('lat', true,
-      'Tính Đi Trễ / Về Sớm thành công! (' + (res.totalRows || 0) + ' dòng)',
-      links
-    );
+      let links = '';
+      if (res.latenessSheetUrl) links += linkHtml(res.latenessSheetUrl, '📋 Mở Sheet Lateness (HRM Database)');
+      if (res.archiveFileUrl) links += linkHtml(res.archiveFileUrl, '📊 Mở file Tổng hợp mới nhất');
+      if (res.archiveFolderUrl) links += linkHtml(res.archiveFolderUrl, '📁 Thư mục Archiver Tổng hợp');
+
+      showResult('lat', true, 'Tính Đi Trễ / Về Sớm thành công! (' + (res.totalRows || 0) + ' dòng)', links);
+
+    } catch (err) {
+      onFailure('lat', err);
+    }
   }
 
   // ─── Shared Helpers ───────────────────────────────────────────────────────
@@ -142,8 +251,7 @@
     const box = document.getElementById('result-' + id);
     box.style.display = 'block';
     box.className = 'result-box ' + (success ? 'result-success' : 'result-error');
-    document.getElementById('resultTitle-' + id).innerHTML =
-      (success ? '✅ ' : '❌ ') + title;
+    document.getElementById('resultTitle-' + id).innerHTML = (success ? '✅ ' : '❌ ') + title;
     document.getElementById('resultLinks-' + id).innerHTML = links || '';
   }
 

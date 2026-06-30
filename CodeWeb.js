@@ -151,3 +151,46 @@ function runLatenessWeb() {
   }
 }
 
+/**
+ * Xóa toàn bộ file trong thư mục Lateness trước khi upload file mới.
+ */
+function clearLatenessFolder() {
+  try {
+    const folder = Config.getLatenessFolder();
+    const files = folder.getFiles();
+    let count = 0;
+    while (files.hasNext()) {
+      files.next().setTrashed(true);
+      count++;
+    }
+    Logger.log(`API clearLatenessFolder: Đã xóa ${count} file cũ.`);
+    return true;
+  } catch (error) {
+    Logger.log("API clearLatenessFolder ERROR: " + error.toString());
+    throw new Error("Không thể làm sạch thư mục Lateness: " + error.message);
+  }
+}
+
+/**
+ * API tiếp nhận 1 file Lateness từ Frontend và lưu vào Lateness Folder.
+ * 
+ * @param {string} fileName - Tên file gốc
+ * @param {string} base64Data - Dữ liệu file mã hóa base64 từ client
+ */
+function uploadFileToLatenessFolder(fileName, base64Data) {
+  try {
+    Logger.log("API uploadFileToLatenessFolder: Đang lưu file " + fileName);
+    const decodedBytes = Utilities.base64Decode(base64Data);
+    const contentType = getMimeTypeFromFileName(fileName);
+    const blob = Utilities.newBlob(decodedBytes, contentType, fileName);
+    
+    const folder = Config.getLatenessFolder();
+    folder.createFile(blob);
+    
+    return true;
+  } catch (error) {
+    Logger.log("API uploadFileToLatenessFolder ERROR: " + error.toString());
+    throw new Error("Lỗi khi tải file " + fileName + ": " + error.message);
+  }
+}
+

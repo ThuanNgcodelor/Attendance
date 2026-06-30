@@ -36,13 +36,13 @@
               <path d="M14.5 3a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h13zm-13-1A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h13a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-13z"/>
               <path d="M7 5.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0zM7 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm-1.496-.854a.5.5 0 0 1 0 .708l-1.5 1.5a.5.5 0 0 1-.708 0l-.5-.5a.5.5 0 1 1 .708-.708l.146.147 1.146-1.147a.5.5 0 0 1 .708 0z"/>
             </svg>
-            Đi Trễ / Về Sớm
+            Tổng Hợp Đi Trễ
           </button>
         </div>
 
-        <!-- ═══════════════════════════════════════════════════════
+        <!-- ═══════════════════════════════════════════════════
              TAB 1: XỬ LÝ CHẤM CÔNG
-        ═══════════════════════════════════════════════════════ -->
+        ═══════════════════════════════════════════════════ -->
         <div class="tab-panel" id="panel-attendance">
           <div class="app-card">
             <div class="app-card-header">
@@ -56,7 +56,7 @@
             </div>
             <div class="app-card-body">
 
-              <!-- Info Steps -->
+              <!-- Steps -->
               <div class="steps-row mb-4">
                 <div class="step-item">
                   <div class="step-num">1</div>
@@ -87,7 +87,7 @@
                 <input type="file" id="fileInput-att" class="file-input" accept=".xlsx,.xlsm,.xls">
               </div>
 
-              <!-- Selected File -->
+              <!-- Selected File Badge -->
               <div id="fileBadge-att" class="text-center d-none mt-3">
                 <div class="file-badge">
                   <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
@@ -124,62 +124,71 @@
           </div>
         </div>
 
-        <!-- ═══════════════════════════════════════════════════════
-             TAB 2: ĐI TRỄ / VỀ SỚM
-        ═══════════════════════════════════════════════════════ -->
+        <!-- ═══════════════════════════════════════════════════
+             TAB 2: TỔNG HỢP ĐI TRỄ / VỀ SỚM
+        ═══════════════════════════════════════════════════ -->
         <div class="tab-panel d-none" id="panel-lateness">
           <div class="app-card">
             <div class="app-card-header">
               <div class="d-flex align-items-center gap-2">
                 <div class="feature-badge badge-green">02</div>
                 <div>
-                  <h2 class="app-card-title">Tính Đi Trễ / Về Sớm</h2>
-                  <p class="app-card-desc">Đọc file từ Lateness Folder → tính toán → xuất Sheet Lateness + file Archiver Tổng hợp</p>
+                  <h2 class="app-card-title">Tổng Hợp Đi Trễ / Về Sớm</h2>
+                  <p class="app-card-desc">Kéo file phòng ban vào đây → upload lên Lateness Folder → tính toán → xuất Archiver Tổng hợp</p>
                 </div>
               </div>
             </div>
             <div class="app-card-body">
 
-              <!-- Info Steps -->
+              <!-- Steps -->
               <div class="steps-row mb-4">
                 <div class="step-item">
                   <div class="step-num step-green">1</div>
-                  <div class="step-text">File có sẵn<br><span>trong Lateness Folder</span></div>
+                  <div class="step-text">Kéo file vào đây<br><span>TCHC, XNK, KHVT...</span></div>
                 </div>
                 <div class="step-arrow">→</div>
                 <div class="step-item">
                   <div class="step-num step-green">2</div>
-                  <div class="step-text">Tính Công<br><span>Đi trễ / Về sớm</span></div>
+                  <div class="step-text">Upload lên Drive<br><span>Lateness Folder</span></div>
                 </div>
                 <div class="step-arrow">→</div>
                 <div class="step-item">
                   <div class="step-num step-green">3</div>
-                  <div class="step-text">Xuất Tổng hợp<br><span>vào Archiver Folder</span></div>
+                  <div class="step-text">Xuất Tổng hợp<br><span>Archiver Folder</span></div>
                 </div>
               </div>
 
-              <!-- Info Box -->
-              <div class="info-box">
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="flex-shrink-0">
-                  <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
-                </svg>
-                <div>
-                  <strong>Lưu ý trước khi chạy:</strong>
-                  <ul class="mb-0 mt-1 ps-3">
-                    <li>Upload file TCHC.xlsx, XNK.xlsx... vào <strong>Lateness Folder</strong> trên Drive</li>
-                    <li>Đảm bảo cột <strong>Phòng Ban (cột D)</strong> đã được điền đúng trong mỗi file</li>
-                    <li>Settings Sheet cần có: <code>LATENESS_FOLDER_ID</code>, <code>LATENESS_ARCHIVE_FOLDER_ID</code></li>
-                  </ul>
+              <!-- Multi-file Upload Zone -->
+              <div class="upload-zone upload-zone-green" id="uploadZone-lat">
+                <div class="upload-icon upload-icon-green">
+                  <svg width="40" height="40" fill="currentColor" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M7.646 5.146a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1-.708.708L8.5 6.707V10.5a.5.5 0 0 1-1 0V6.707L6.354 7.854a.5.5 0 1 1-.708-.708l2-2z"/>
+                    <path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383zm.653.757c-.757.653-1.153 1.44-1.153 2.056v.548l-.548.064C2.121 6.9 1 8.006 1 9.318 1 10.773 2.227 12 3.781 12h8.906C13.98 12 15 11.02 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.825 10.328 3 8 3a4.53 4.53 0 0 0-2.941 1.1z"/>
+                  </svg>
                 </div>
+                <div class="upload-text">Kéo thả <strong>nhiều file Excel</strong> vào đây</div>
+                <div class="upload-subtext">TCHC.xlsx, XNK.xlsx, KHVT.xlsx... — hoặc nhấn để chọn</div>
+                <input type="file" id="fileInput-lat" class="file-input" accept=".xlsx,.xlsm,.xls" multiple>
+              </div>
+
+              <!-- Multi-file List -->
+              <div id="fileList-lat" class="file-list d-none"></div>
+
+              <!-- Warning -->
+              <div class="info-box info-box-sm mt-3">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="flex-shrink-0 mt-1">
+                  <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                </svg>
+                <span>Đảm bảo <strong>cột D (Phòng Ban)</strong> đã được điền đúng trong mỗi file trước khi upload.</span>
               </div>
 
               <!-- Button -->
               <div class="text-center mt-4">
-                <button class="btn btn-success-hrm w-100" id="btn-lat" onclick="runLatenessUI()">
+                <button class="btn btn-success-hrm w-100" id="btn-lat" disabled onclick="runLatenessUI()">
                   <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="me-2">
                     <path d="M11.596 8.697l-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393z"/>
                   </svg>
-                  Bắt đầu tính Đi Trễ / Về Sớm
+                  Upload &amp; Tính Tổng Hợp
                 </button>
               </div>
 
