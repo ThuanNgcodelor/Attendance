@@ -40,8 +40,17 @@ const LatenessCalculator = {
     // ── BƯỚC 1: Tính Công, Đi trễ, Về sớm cho từng record ──────────────
     const computed = records.map(record => {
 
-      const checkInStr  = this._formatTime(record.checkIn);
-      const checkOutStr = this._formatTime(record.checkOut);
+      let checkInStr  = this._formatTime(record.checkIn);
+      let checkOutStr = this._formatTime(record.checkOut);
+
+      // Sanity check: nếu giờ vào > giờ ra → dữ liệu bị lộn, hoán đổi lại
+      if (checkInStr && checkOutStr && checkInStr > checkOutStr) {
+        Logger.log("LatenessCalculator: Swap detected for " + record.employeeId +
+                   " | " + record.date + " | checkIn=" + checkInStr + " checkOut=" + checkOutStr);
+        const tmp  = checkInStr;
+        checkInStr  = checkOutStr;
+        checkOutStr = tmp;
+      }
 
       // Công: 1 nếu có đủ 2 lần chấm
       const congValue = (checkInStr && checkOutStr) ? 1 : 0;
@@ -61,19 +70,18 @@ const LatenessCalculator = {
         employeeId:    record.employeeId,
         employeeName:  record.employeeName,
         department:    record.department,
-        checkIn:       checkInStr || 0,   // 0 nếu không có (Looker Studio aggregate tốt hơn empty)
+        checkIn:       checkInStr || 0,
         checkOut:      checkOutStr || 0,
         congValue,
         lateMinutes,
         earlyMinutes,
-        lateFrequency:  0,  // sẽ tính ở bước 2
-        earlyFrequency: 0   // sẽ tính ở bước 2
+        lateFrequency:  0,
+        earlyFrequency: 0
       };
 
     });
 
     // ── BƯỚC 2: Group theo employeeId → tính tần suất tích luỹ ─────────
-    // Group
     const byEmployee = {};
     for (const item of computed) {
       const id = item.employeeId;
@@ -81,7 +89,6 @@ const LatenessCalculator = {
       byEmployee[id].push(item);
     }
 
-    // Với mỗi NV: sort theo date tăng dần, rồi tích luỹ tần suất
     const results = [];
 
     for (const empId of Object.keys(byEmployee)) {
@@ -94,18 +101,34 @@ const LatenessCalculator = {
       let earlyCounter = 0;
 
       for (const row of rows) {
-
-        if (row.lateMinutes  > this.FREQUENCY_THRESHOLD_MINUTES)  lateCounter++;
+        if (row.lateMinutes  > this.FREQUENCY_THRESHOLD_MINUTES) lateCounter++;
         if (row.earlyMinutes > this.FREQUENCY_THRESHOLD_MINUTES) earlyCounter++;
-
         row.lateFrequency  = lateCounter;
         row.earlyFrequency = earlyCounter;
-
         results.push(row);
-
       }
 
     }
+
+    // ── BƯỚC 3: Sắp xếp kết quả theo Phòng ban → Mã NV → Ngày ─────────
+    results.sort((a, b) => {
+
+      // 1. Sắp theo Phòng ban (A-Z)
+      const deptA = (a.department || "").toString().toUpperCase();
+      const deptB = (b.department || "").toString().toUpperCase();
+      if (deptA < deptB) return -1;
+      if (deptA > deptB) return  1;
+
+      // 2. Sắp theo Mã NV (A-Z)
+      const idA = (a.employeeId || "").toString().toUpperCase();
+      const idB = (b.employeeId || "").toString().toUpperCase();
+      if (idA < idB) return -1;
+      if (idA > idB) return  1;
+
+      // 3. Sắp theo Ngày (tăng dần)
+      return this._toDateMs(a.date) - this._toDateMs(b.date);
+
+    });
 
     Logger.log("LatenessCalculator: Computed " + results.length + " results.");
 
