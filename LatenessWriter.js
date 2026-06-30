@@ -159,9 +159,8 @@ const LatenessWriter = {
     sheet.getRange(2, 5, output.length, 7).setHorizontalAlignment("center");
     sheet.getRange(2, 3, output.length, 2).setHorizontalAlignment("left");
 
-    for (let i = 2; i <= output.length + 1; i++) {
-      sheet.setRowHeight(i, 22);
-    }
+    // Tối ưu hiệu năng bằng Batch Update
+    sheet.setRowHeights(2, output.length, 22);
 
     // ── COLUMN WIDTHS ────────────────────────────────────────────────────
     sheet.setColumnWidth(1,  105);

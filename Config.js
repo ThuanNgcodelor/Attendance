@@ -6,30 +6,47 @@
  */
 const Config = {
 
+  _cache: null,
+
   /**
-   * Lấy giá trị theo Key từ sheet Settings
+   * Tải toàn bộ cấu hình từ Sheet vào bộ nhớ RAM 1 lần duy nhất
+   */
+  _load() {
+    if (this._cache !== null) return; // Đã load rồi thì bỏ qua
+    this._cache = {};
+    
+    const sheet = SpreadsheetApp
+      .getActiveSpreadsheet()
+      .getSheetByName(SHEETS.SETTINGS);
+      
+    if (!sheet) return;
+
+    const values = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < values.length; i++) {
+      const key = values[i][0];
+      if (key) {
+        this._cache[key] = values[i][1];
+      }
+    }
+  },
+
+  /**
+   * Lấy giá trị theo Key từ sheet Settings (lấy từ Cache RAM)
    * Ví dụ: Config.get("IMPORT_FOLDER_ID")
    *
    * @param {string} key
    * @returns {string|null}
    */
   get(key) {
+    this._load(); // Đảm bảo cache đã sẵn sàng
 
-    const sheet = SpreadsheetApp
-      .getActiveSpreadsheet()
-      .getSheetByName(SHEETS.SETTINGS);
-
-    const values = sheet.getDataRange().getValues();
-
-    for (let i = 1; i < values.length; i++) {
-      if (values[i][0] === key) {
-        return values[i][1];
-      }
+    if (this._cache[key] !== undefined) {
+      return this._cache[key];
     }
 
     Logger.log("Config Warning: Không tìm thấy key [" + key + "] trong Settings.");
     return null;
-
   },
 
   // ─── FOLDER ───────────────────────────────

@@ -232,10 +232,8 @@ const ExcelImporter = {
       sheet.getRange(3, 1, output.length, 1).setHorizontalAlignment("center"); // STT
       sheet.getRange(3, 5, output.length, 4).setHorizontalAlignment("center"); // Ngày → Lần chấm 2
 
-      // Đặt chiều cao mỗi dòng data
-      for (let i = 3; i <= output.length + 2; i++) {
-        sheet.setRowHeight(i, 24);
-      }
+      // Đặt chiều cao mỗi dòng data (Tối ưu bằng Batch Update thay vì vòng lặp)
+      sheet.setRowHeights(3, output.length, 24);
 
     }
 
