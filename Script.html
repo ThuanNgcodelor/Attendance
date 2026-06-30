@@ -153,9 +153,9 @@
       setRunning('att', false);
 
       let links = '';
-      if (res.congFileUrl) links += linkHtml(res.congFileUrl, '📊 Mở file Bảng Công mới nhất');
-      if (res.archiveCongFolderUrl) links += linkHtml(res.archiveCongFolderUrl, '📁 Thư mục Archive Bảng Công');
-      if (res.archiveFolderUrl) links += linkHtml(res.archiveFolderUrl, '📁 Thư mục Archive Chấm Công');
+      if (res.congFileUrl) links += linkHtml(res.congFileUrl, 'Mở file Bảng Công mới nhất');
+      if (res.archiveCongFolderUrl) links += linkHtml(res.archiveCongFolderUrl, 'Thư mục Archive Bảng Công');
+      if (res.archiveFolderUrl) links += linkHtml(res.archiveFolderUrl, 'Thư mục Archive Chấm Công');
 
       showResult('att', true, 'Xử lý Chấm Công thành công!', links);
 
@@ -177,9 +177,9 @@
       setRunning('lat', false);
 
       let links = '';
-      if (res.latenessSheetUrl) links += linkHtml(res.latenessSheetUrl, '📋 Mở Sheet Lateness (HRM Database)');
-      if (res.archiveFileUrl) links += linkHtml(res.archiveFileUrl, '📊 Mở file Tổng hợp mới nhất');
-      if (res.archiveFolderUrl) links += linkHtml(res.archiveFolderUrl, '📁 Thư mục Archiver Tổng hợp');
+      if (res.latenessSheetUrl) links += linkHtml(res.latenessSheetUrl, 'Mở Sheet Lateness (HRM Database)');
+      if (res.archiveFileUrl) links += linkHtml(res.archiveFileUrl, 'Mở file Tổng hợp mới nhất');
+      if (res.archiveFolderUrl) links += linkHtml(res.archiveFolderUrl, 'Thư mục Archiver Tổng hợp');
 
       showResult('lat', true, 'Tính Đi Trễ / Về Sớm thành công! (' + (res.totalRows || 0) + ' dòng)', links);
 
